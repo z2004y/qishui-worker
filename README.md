@@ -98,22 +98,6 @@ curl -H "Authorization: Bearer YOUR_API_KEY" https://qishui-api.zzy721683736.wor
 | `GET/POST /share/resolve` | 分享链接/ID 资源识别（track/video/playlist） |
 | `GET /api/capabilities` | 能力矩阵 |
 
-## 已移除的接口（需登录 / App 上下文 / 登录链路本身）
-
-以下接口已从部署中删除（访问返回 404）：
-
-| 接口 | 删除原因 |
-|---|---|
-| `/auth/qrcode`、`/auth/qrcode/status` | 扫码登录链路已整体移除 |
-| `/auth/me`、`/me/playlists`、`/me/collection/mixed` | 个人账号接口，需 Cookie/sessionid |
-| `/video/detail` | 需 Cookie |
-| `/media/player` | App 上下文 + 服务端脱敏后无可用值 |
-| `/daily/mix` | 需 App 上下文（裸调 ERR_REQUEST_FORBIDDEN） |
-| `/playlist/feed/media`、`/playlist/related/media`、`/feed/listen/video` | 需 App 上下文/登录态 |
-| `/radio/list`、`/radio/tracks` | 上游仅在登录态下发电台数据，免登录恒为空 |
-
-> 需要登录态（个人歌单、收藏、原版高音质）的话，请自建 Node 版 `qishui-api`（扫码登录 + 持 cookie），Worker 版定位为免登录公开查询。
-
 ## 部署 / 更新
 
 ```bash
