@@ -1,0 +1,14 @@
+{
+  "name": "qishui-worker",
+  "version": "1.1.0",
+  "description": "汽水音乐 API —— Cloudflare Workers 移植版",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "node test/worker-test.js"
+  },
+  "devDependencies": {
+    "wrangler": "^4.125.0"
+  }
+}
