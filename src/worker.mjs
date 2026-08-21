@@ -1,10 +1,9 @@
 /**
- * qishui-api —— Cloudflare Workers 移植版（ESM 入口）
+ * qishui-api —— Cloudflare Workers 移植版（ESM 入口，单一 fetch handler）
  *
- * 对应原仓库 server.js（Express）：
- *  - Express 动态模块扫描 -> 静态路由表 src/routes.js
- *  - express.json(1mb) -> readRequestBody() 手动解析并限长
- *  - 其余逻辑（统一响应 ok/fail、CORS、HttpError 映射）逐条对应
+ * - 路由：src/routes.js 数据表驱动（无独立 module 层）
+ * - express.json(1mb) -> readRequestBody() 手动解析并限长
+ * - 鉴权：除 /health 与 OPTIONS 外全部要求 API_KEY（X-API-Key 头 / ?key=/Bearer）
  *
  * 部署要求：
  *  - compatibility_date >= 2026-08-04（nodejs_compat 默认启用，提供 Buffer/process.env）
@@ -15,29 +14,18 @@ import { QishuiClient } from './qishuiClient.js'
 import { HttpError, ValidationError } from './errors.js'
 import { ok, fail } from './response.js'
 import { sanitizeForExternal } from './redaction.js'
-import MODULES from './routes.js'
+import ROUTES from './routes.js'
 
 const APP_NAME = 'qishui-api'
-const APP_VERSION = '1.0.0'
+const APP_VERSION = '1.1.0'
 const JSON_LIMIT = 1024 * 1024 // express.json limit: '1mb'
 
 function createTraceId() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
 }
 
-function moduleDefs() {
-  return Object.entries(MODULES).map(([name, handler]) => ({
-    name,
-    route: handler.route || `/${name.replace(/_/g, '/')}`,
-    handler,
-  }))
-}
-
 function corsHeaders(request) {
-  const allow = String(config.corsAllowOrigin || '*')
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean)
+  const allow = String(config.corsAllowOrigin || '*').split(',').map((s) => s.trim()).filter(Boolean)
   const headers = {
     'Access-Control-Allow-Headers': 'X-Requested-With,Content-Type,Cookie',
     'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
@@ -86,9 +74,16 @@ async function readRequestBody(request) {
   }
 }
 
+function capabilitiesPayload() {
+  return [
+    ...ROUTES.map((r) => ({ route: r.route, methods: r.methods || ['GET', 'POST'], description: r.desc, group: r.group })),
+    { route: '/api/capabilities', methods: ['GET'], description: '能力矩阵', group: 'system' },
+  ]
+}
+
 export default {
   async fetch(request, env) {
-    // 保险：把 Worker 环境变量/密钥补齐到 process.env（config.js 从 process.env 读取）
+    // 把 Worker 环境变量/密钥补齐到 process.env（config.js 从 process.env 读取）
     if (typeof process !== 'undefined' && process.env && env && typeof env === 'object') {
       for (const [key, value] of Object.entries(env)) {
         if (process.env[key] === undefined || process.env[key] === null) process.env[key] = value
@@ -105,11 +100,8 @@ export default {
       return json(fail(40000, '无效请求', traceId), headers, 400)
     }
 
-    // ===== 鉴权：除 /health 与 OPTIONS 外全部要求 API_KEY =====
-    // 传递方式（任一即可）：X-API-Key 头 / ?key= 查询参数 / Authorization: Bearer <key>
-    const apiKey = (typeof process !== 'undefined' && process.env && process.env.API_KEY)
-      || (env && env.API_KEY)
-      || ''
+    // ===== 鉴权（/health、OPTIONS 除外）=====
+    const apiKey = (typeof process !== 'undefined' && process.env && process.env.API_KEY) || (env && env.API_KEY) || ''
     if (apiKey && url.pathname !== '/health') {
       const provided =
         request.headers.get('x-api-key')
@@ -125,52 +117,38 @@ export default {
     }
 
     try {
-      const client = new QishuiClient()
-      const defs = moduleDefs()
-
       if (url.pathname === '/') {
-        return json(ok({ name: APP_NAME, version: APP_VERSION, routes: defs.map((d) => d.route) }, traceId), headers)
+        return json(ok({ name: APP_NAME, version: APP_VERSION, routes: ROUTES.map((r) => r.route) }, traceId), headers)
       }
       if (url.pathname === '/health') {
         return json(ok({ status: 'ok' }, traceId), headers)
       }
-      if (url.pathname === '/api/list') {
-        return json(ok(defs.map((d) => ({ route: d.route, file: `${d.name}.js` })), traceId), headers)
+      if (url.pathname === '/api/capabilities') {
+        return json(ok({ count: capabilitiesPayload().length, capabilities: capabilitiesPayload() }, traceId), headers)
       }
 
-      const def = defs.find((d) => d.route === url.pathname)
+      const def = ROUTES.find((r) => r.route === url.pathname)
       if (!def) {
         return json(fail(40400, '接口不存在', traceId, { path: url.pathname }), headers, 404)
       }
 
-      const declaredMethods = Array.isArray(def.handler.methods) && def.handler.methods.length
-        ? def.handler.methods
-        : ['get', 'post']
+      const methods = def.methods || ['get', 'post']
       const method = request.method.toLowerCase()
-      if (!declaredMethods.includes(method)) {
+      if (!methods.includes(method)) {
         return json(fail(40400, '接口不存在', traceId, { path: url.pathname, method }), headers, 404)
       }
-
-      if (def.handler.bodyOnly && url.searchParams.size) {
+      if (def.bodyOnly && url.searchParams.size) {
         throw new ValidationError('敏感参数必须放在 POST JSON body 中')
       }
 
       const body = await readRequestBody(request)
-      const input = {
-        ...Object.fromEntries(url.searchParams),
-        ...body,
-        body,
-      }
-      const data = await def.handler(input, {
+      const input = { ...Object.fromEntries(url.searchParams), ...body, body }
+      const client = new QishuiClient()
+      const data = await client[def.fn](input, {
         req: request,
-        client,
         cookie: request.headers.get('cookie') || '',
         traceId,
       })
-      // 模块可返回 { status, body } 自定义状态码
-      if (data && typeof data === 'object' && data.status && data.body) {
-        return json(data.body, headers, data.status)
-      }
       return json(ok(data, traceId), headers)
     } catch (error) {
       const status = error instanceof HttpError ? error.status : 500

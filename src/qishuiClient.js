@@ -247,7 +247,6 @@ class QishuiClient {
   constructor(options = {}) {
     this.lunaApiHost = options.lunaApiHost || config.lunaApiHost
     this.pcApiHost = options.pcApiHost || config.pcApiHost
-    this.musicShareHost = options.musicShareHost || config.musicShareHost
     this.timeoutMs = options.timeoutMs || config.requestTimeoutMs
   }
 

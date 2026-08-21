@@ -130,30 +130,9 @@ function normalizeSearchGroups(data) {
   }
 }
 
-function normalizeProfile(data) {
-  const info = data?.my_info || data?.user || data || {}
-  return {
-    id: info.id ? String(info.id) : '',
-    nickname: info.nickname || info.name || '',
-    douyin_id: info.douyin_id || '',
-    is_vip: Boolean(info.is_vip),
-    vip_stage: info.vip_stage || '',
-    raw: data,
-  }
-}
 
-function normalizeMixedCollections(data) {
-  const collections = Array.isArray(data?.mixed_collections) ? data.mixed_collections : []
-  return collections
-    .map((item) => ({
-      item_type: item.item_type || '',
-      playlist: normalizePlaylist(item.playlist),
-      track: normalizeTrack(item.track || item.media?.track),
-      video: normalizeVideo(item.video || item.media?.video),
-      raw: item,
-    }))
-    .filter((item) => item.playlist || item.track || item.video)
-}
+
+
 
 module.exports = {
   pickUrl,
@@ -161,10 +140,10 @@ module.exports = {
   normalizeFeedItem,
   normalizePlaylist,
   normalizePlaylistDetail,
-  normalizeVideo,
-  normalizeMixedResource,
+
+
   normalizeSearchGroups,
-  normalizeProfile,
-  normalizeMixedCollections,
+
+
   extractPlaylistsFromDiscoverMix,
 }

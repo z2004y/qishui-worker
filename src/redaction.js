@@ -93,21 +93,7 @@ function sanitizeForExternal(value, options = {}) {
   return sanitizeNode(value, { secrets: options.secrets || [] }, '', 0)
 }
 
-function collectCookieSecrets(cookie) {
-  const secrets = new Set()
-  const text = String(cookie || '').trim()
-  if (!text) return []
-  secrets.add(text)
-  for (const part of text.split(';')) {
-    const [rawName, ...rawValueParts] = part.split('=')
-    const name = rawName.trim()
-    const value = rawValueParts.join('=').trim()
-    if (!name || !value) continue
-    secrets.add(`${name}=${value}`)
-    secrets.add(value)
-  }
-  return [...secrets]
-}
+
 
 function collectHeaderSecrets(headers = {}) {
   const secrets = new Set()
@@ -128,10 +114,7 @@ function collectHeaderSecrets(headers = {}) {
 }
 
 module.exports = {
-  REDACTED,
-  collectCookieSecrets,
   collectHeaderSecrets,
-  isSensitiveKey,
   redactSensitiveString,
   safeUrlForOutput,
   sanitizeForExternal,

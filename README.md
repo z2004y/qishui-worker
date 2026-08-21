@@ -9,28 +9,29 @@ GitHub：https://github.com/z2004y/qishui-worker
 ```
 qishui-worker/
 ├── src/                      # 平台无关的业务实现（Worker 兼容 JS）
-│   ├── worker.mjs            # ★ 入口：fetch handler + 鉴权 + 路由分发 + CORS + body 限长
-│   ├── routes.js             # 静态路由注册表（23 个公开接口；已删的登录接口不在此）
+│   ├── worker.mjs            # ★ 唯一入口：fetch handler + 鉴权 + 路由分发 + CORS + body 限长
+│   ├── routes.js             # 路由数据表（单一数据源：路由 ↔ client 方法 ↔ 能力描述）
 │   ├── config.js             # 配置（读 process.env，Worker 环境变量/密钥注入）
-│   ├── qishuiClient.js       # 上游客户端（已裁剪：仅保留在用接口对应方法）
-│   ├── capabilities.js       # 能力矩阵（与 routes.js 一一对应）
+│   ├── qishuiClient.js       # 上游客户端（仅保留在用方法）
 │   ├── errors.js / response.js      # 错误类型 / 统一响应 {code,message,data,trace_id}
 │   ├── ids.js / lyrics.js    # ID 提取 / 歌词格式化（纯函数）
 │   ├── normalizers.js        # 上游响应归一化（纯函数）
-│   ├── redaction.js          # 脱敏（凭证/播放敏感字段）
+│   ├── redaction.js          # 脱敏（凭证/敏感字段）
 │   ├── http.js               # fetch 封装（超时/JSON/错误详情脱敏）
 │   ├── routerData.js         # 分享页 _ROUTER_DATA 解析（HTML 抓取）
 │   ├── download.js           # 受控下载（域名白名单 + 大小限制 + 重定向跟随）
 │   └── audioDecryptor.js     # spade_a 解密 + MP4 样本级 AES-CTR 解密（WebCrypto）
-├── module/                   # 23 个薄路由包装（每个 = 1 个接口，参数直透 client）
 ├── test/
-│   └── worker-test.js        # 21 项本地测试（真实上游 + 鉴权 + 404 + AES-CTR 一致性）
-├── wrangler.toml             # CF 配置：compat 标志、[vars] 环境变量（含 API_KEY）
+│   ├── worker-test.js        # 21 项本地测试（真实上游 + 鉴权 + 404 + AES-CTR 一致性）
+│   └── contract-test.js      # 7 项页面 ↔ API 契约测试
+├── web/
+│   └── qishui-browser.html   # 单文件浏览页（推荐歌单/歌曲搜索/歌单搜索/发现歌曲/解析）
+├── wrangler.toml             # CF 配置：compat 标志、[vars] 环境变量
 ├── package.json / package-lock.json
 └── README.md
 ```
 
-分层：`worker.mjs`（边缘层）→ `module/*`（路由层）→ `qishuiClient`（上游客户端）→ `src/*`（纯函数工具）。除入口外全部为 CommonJS，避免改动上游移植文件；`audioDecryptor` 用 WebCrypto 替代 Node crypto，其余仅做了 `node:` 导入规范化。
+数据流：`worker.mjs`（边缘层，按 `routes.js` 数据表分发）→ `client[fn]`（上游客户端）→ `src/*`（纯函数工具）。无独立 module 层；`/api/capabilities` 由 worker 从路由表内联生成（单一数据源）。除入口外全部为 CommonJS；`audioDecryptor` 用 WebCrypto 替代 Node crypto，其余仅做了 `node:` 导入规范化。
 
 ## 服务地址与鉴权
 
