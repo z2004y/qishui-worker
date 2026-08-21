@@ -67,6 +67,7 @@
   </div>
   <div class="tabs" id="tabs">
     <div class="tab on" data-tab="recommend">推荐歌单</div>
+    <div class="tab" data-tab="songSearch">歌曲搜索</div>
     <div class="tab" data-tab="search">歌单搜索</div>
     <div class="tab" data-tab="radio">电台</div>
     <div class="tab" data-tab="parse">歌曲解析</div>
@@ -174,6 +175,27 @@ async function loadRecommend() {
     if (!list.length) return showMsg('推荐歌单为空')
     main.innerHTML = `<div class="grid">${list.map(playlistCard).join('')}</div>`
   } catch (e) { showMsg(e.message, true) }
+}
+
+// ===== Tab: 歌曲搜索 =====
+function renderSongSearch() {
+  main.innerHTML = `<div class="toolbar">
+    <input type="text" id="skw" placeholder="搜索歌曲（按歌名）…" style="flex:1; min-width:200px" onkeydown="if(event.key==='Enter')searchSongs()">
+    <button class="primary" onclick="searchSongs()">搜索</button>
+  </div><div id="songResult"></div>`
+  $('skw').focus()
+}
+async function searchSongs() {
+  const kw = $('skw').value.trim()
+  if (!kw) return
+  const box = $('songResult')
+  box.innerHTML = '<div class="msg">搜索中…</div>'
+  try {
+    const d = await api('/search/track', { keywords: kw, count: 50 })
+    const tracks = d.tracks || []
+    if (!tracks.length) return box.innerHTML = '<div class="msg">无结果（汽水公开目录可能未收录，或搜索词太泛）</div>'
+    box.innerHTML = tracks.map(trackItem).join('')
+  } catch (e) { box.innerHTML = `<div class="msg err">${escapeHtml(e.message)}</div>` }
 }
 
 // ===== Tab: 歌单搜索 =====
@@ -336,6 +358,7 @@ document.addEventListener('DOMContentLoaded', () => {
       currentTab = t.dataset.tab
       document.querySelectorAll('.tab').forEach((x) => x.classList.toggle('on', x === t))
       if (currentTab === 'recommend') loadRecommend()
+      else if (currentTab === 'songSearch') renderSongSearch()
       else if (currentTab === 'search') renderSearch()
       else if (currentTab === 'radio') loadRadio()
       else if (currentTab === 'parse') renderParse()

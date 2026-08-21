@@ -2,6 +2,7 @@
 const capabilities = [
   { group: 'search', route: '/search', methods: ['GET', 'POST'], auth: false, app_context: false, raw: true, description: 'PC 搜索歌曲（当前上游受限，可能返回空）' },
   { group: 'search', route: '/search/playlist', methods: ['GET', 'POST'], auth: false, app_context: false, raw: true, description: 'PC 搜索歌单或从混合搜索提取歌单' },
+  { group: 'search', route: '/search/track', methods: ['GET', 'POST'], auth: false, app_context: false, raw: true, description: '公开目录按歌名搜歌曲（火山桥，免登录）' },
   { group: 'search', route: '/search/mixed', methods: ['GET', 'POST'], auth: false, app_context: false, raw: true, description: 'PC 混合搜索（当前上游受限，可能返回空）' },
   { group: 'playlist', route: '/recommend/playlist', methods: ['GET', 'POST'], auth: false, app_context: false, raw: true, description: '推荐歌单' },
   { group: 'playlist', route: '/playlist/detail', methods: ['GET', 'POST'], auth: false, app_context: false, raw: true, description: '歌单详情与媒体资源' },

@@ -277,6 +277,44 @@ class QishuiClient {
     }
   }
 
+  // 火山引擎公开目录桥（汽水公开曲库，免登录）：按歌名搜歌曲（Worker 无 CORS/UA 限制）
+  async searchTrack(query = {}, context = {}) {
+    const keyword = requireString(query.keywords || query.keyword || query.q, 'keywords')
+    const base = 'https://api-vehicle.volcengine.com/v2/search/type'
+    const params = {
+      keyword,
+      search_type: 'music',
+      search_source: 'qishui',
+      limit: boundedPositiveInt(query.count || query.limit, 20, 'count'),
+      real_offset: 0,
+    }
+    const common = { method: 'GET', query: params, timeoutMs: this.timeoutMs }
+    let body = (await requestJson(base, {
+      ...common,
+      headers: { 'User-Agent': this.webHeaders()['User-Agent'], Accept: 'application/json,text/plain,*/*' },
+    })).body
+    let list = body && body.data && Array.isArray(body.data.list) ? body.data.list : []
+    if (!list.length) {
+      // 兜底：公开目录桥专用 UA
+      body = (await requestJson(base, {
+        ...common,
+        headers: { 'User-Agent': 'eIsland/26.7 Qishui public catalog bridge', Accept: 'application/json,text/plain,*/*' },
+      })).body
+      list = body && body.data && Array.isArray(body.data.list) ? body.data.list : []
+    }
+    const tracks = (Array.isArray(list) ? list : [])
+      .map((item) => ({
+        id: String(item.item_id || ''),
+        name: item.title || '',
+        artists: [{ name: (item.author_info && item.author_info.name) || '' }].filter((a) => a.name),
+        album: { cover_url: item.cover_url || '' },
+        duration: Number(item.duration) || 0,
+        detail_url: item.detail_url || '',
+      }))
+      .filter((t) => t.id && t.name)
+    return { keyword, total: tracks.length, tracks }
+  }
+
   downloadHeaders() {
     return {
       'User-Agent': this.webHeaders()['User-Agent'],

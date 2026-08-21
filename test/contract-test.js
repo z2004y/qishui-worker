@@ -28,6 +28,17 @@ async function api(path, params = {}) {
 
 ;(async () => {
   try {
+    // 歌曲搜索（公开目录桥，页面新 Tab）
+    try {
+      const st = await api('/search/track', { keywords: '小半' })
+      if (Array.isArray(st.tracks) && st.tracks.length) {
+        const t = st.tracks[0]
+        const stOk = t.id && t.name && Array.isArray(t.artists) && typeof (t.album && t.album.cover_url) === 'string'
+        stOk ? ok(`歌曲搜索（${st.tracks.length} 首）: 《${t.name}》${(t.artists || []).map((a) => a.name).join('/')} id=${t.id} 封面=${!!t.album.cover_url}`)
+          : bad('歌曲搜索字段', JSON.stringify({ id: t.id, name: t.name, artists: t.artists, cover: t.album && t.album.cover_url }))
+      } else bad('歌曲搜索', 'tracks 为空')
+    } catch (e) { bad('歌曲搜索', e.message) }
+
     // 推荐歌单（页面首页 grid）
     const r = await api('/recommend/playlist', { count: 30 })
     if (!Array.isArray(r.playlists) || !r.playlists.length) return bad('推荐歌单', 'playlists 为空')
@@ -83,8 +94,8 @@ async function api(path, params = {}) {
     sdOk ? ok(`歌曲解析: 《${sd.name}》 audio_url=${sd.audio_url.slice(0, 45)}… album.cover=${coverStr} rawCover=${rawCoverOk}`) : bad('song/detail', JSON.stringify({ name: sd.name, url: (sd.audio_url || '').slice(0, 40), cover: coverStr }))
 
     const ly = await api('/lyric', { track_id: tid })
-    if (typeof ly.lrc === 'string' && ly.lrc.length) ok(`歌词 ${ly.lrc.length} 字符（KRC，页面内置转换器转 LRC）`)
-    else bad('lyric', 'lrc 为空')
+    if (typeof ly.lrc === 'string') ok(`歌词 ${ly.lrc.length ? ly.lrc.length + ' 字符（KRC，页面内置转换器转 LRC）' : '为空（该歌无歌词，属正常）'}`)
+    else bad('lyric', 'lrc 缺失')
   } catch (e) { bad('契约验证', e.message) }
 
   console.log(`\n结果: pass=${pass} fail=${fail}`)

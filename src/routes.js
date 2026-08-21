@@ -25,6 +25,7 @@ module.exports = {
   search: require('../module/search'),
   search_mixed: require('../module/search_mixed'),
   search_playlist: require('../module/search_playlist'),
+  search_track: require('../module/search_track'),
   share_resolve: require('../module/share_resolve'),
   song_detail: require('../module/song_detail'),
   track_detail: require('../module/track_detail'),
