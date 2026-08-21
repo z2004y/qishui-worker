@@ -122,9 +122,9 @@ async function api(path, init, env = {}) {
     ok('GET /lyric -> ' + (r.body.data.lrc ? `LRC ${r.body.data.lrc.length} 字符` : '空歌词'))
   } catch (e) { bad('lyric', e.message) }
 
-  // 7) 已移除的登录/个人接口应 404（鉴权用例之前执行，避免 API_KEY 干扰）
+  // 已移除的登录/个人接口应 404（鉴权用例之前执行，避免 API_KEY 干扰：/auth/* /me/* /video/detail /media/player /daily/mix /playlist/feed/media /playlist/related/media /feed/listen/video /radio/*）
   try {
-    const removed = ['/media/player?track_id=7079108541549643812', '/auth/qrcode', '/auth/me', '/auth/qrcode/status', '/me/playlists', '/me/collection/mixed', '/daily/mix', '/video/detail', '/playlist/feed/media', '/playlist/related/media', '/feed/listen/video']
+    const removed = ['/media/player?track_id=7079108541549643812', '/auth/qrcode', '/auth/me', '/auth/qrcode/status', '/me/playlists', '/me/collection/mixed', '/daily/mix', '/video/detail', '/playlist/feed/media', '/playlist/related/media', '/feed/listen/video', '/radio/list', '/radio/tracks']
     let checked = 0
     for (const p of removed) {
       const r = await api(p, undefined, {})

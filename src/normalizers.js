@@ -77,23 +77,6 @@ function extractPlaylistsFromDiscoverMix(data) {
     .filter((playlist) => playlist && playlist.id)
 }
 
-function extractRadiosFromDiscover(data) {
-  const blocks = Array.isArray(data?.blocks) ? data.blocks : []
-  const radioBlock = blocks.find((block) => block?.type === 'discover_feed_radio')
-  const innerBlocks = Array.isArray(radioBlock?.inner_block) ? radioBlock.inner_block : []
-  return innerBlocks
-    .flatMap((block) => (Array.isArray(block.resources) ? block.resources : []))
-    .map((resource) => resource?.entity?.radio)
-    .filter(Boolean)
-    .map((radio) => ({
-      id: radio.radio_id ? String(radio.radio_id) : '',
-      name: radio.radio_name || '',
-      type: radio.radio_type || '',
-      raw: radio,
-    }))
-    .filter((radio) => radio.id)
-}
-
 function normalizePlaylistDetail(data) {
   const mediaResources = Array.isArray(data?.media_resources) ? data.media_resources : []
   return {
@@ -184,5 +167,4 @@ module.exports = {
   normalizeProfile,
   normalizeMixedCollections,
   extractPlaylistsFromDiscoverMix,
-  extractRadiosFromDiscover,
 }

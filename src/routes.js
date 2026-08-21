@@ -19,8 +19,6 @@ module.exports = {
   h5_seo_track: require('../module/h5_seo_track'),
   lyric: require('../module/lyric'),
   playlist_detail: require('../module/playlist_detail'),
-  radio_list: require('../module/radio_list'),
-  radio_tracks: require('../module/radio_tracks'),
   recommend_playlist: require('../module/recommend_playlist'),
   search: require('../module/search'),
   search_mixed: require('../module/search_mixed'),

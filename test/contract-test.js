@@ -73,15 +73,13 @@ async function api(path, params = {}) {
     ok1 ? ok(`歌单详情（跳过 ${emptyCount} 个空壳）《${pl.title}》 ${tracks.length} 首: 《${tName}》${tArtist} 封面=${listItem.coverIsStr} 时长=${listItem.dur}s`)
       : bad('歌单详情 track 字段', JSON.stringify(listItem))
 
-    // 电台
-    const rl = await api('/radio/list')
-    if (Array.isArray(rl.radios) && rl.radios.length) {
-      ok(`电台列表（${rl.radios.length} 个）: ${rl.radios[0].name}`)
-      const rt = await api('/radio/tracks', { radio_id: rl.radios[0].id, count: 10 })
-      const items = rt.items || []
-      ok(`电台歌曲（${items.length} 首）${items.length && items[0].track ? ': ' + (items[0].track.name || '') : ''}`)
-    } else {
-      ok('电台列表当前为空（页面已提示此情况）')
+    // 电台接口已删除（上游需登录态），应 404
+    try {
+      await api('/radio/list')
+      bad('电台接口', '应 404 却返回数据')
+    } catch (e) {
+      if (/接口不存在|404/.test(e.message)) ok('电台接口已删除（上游需登录态，返回 404）')
+      else bad('电台接口 404 断言', e.message)
     }
 
     // 歌曲解析 + 播放 + 歌词（页面 footer 面板路径）

@@ -14,7 +14,6 @@ const {
 } = require('./ids')
 const {
   extractPlaylistsFromDiscoverMix,
-  extractRadiosFromDiscover,
   normalizePlaylistDetail,
   normalizeFeedItem,
   normalizeSearchGroups,
@@ -421,30 +420,6 @@ class QishuiClient {
       total: Number(rawBody.total || rawBody.total_count || rawBody.count || comments.length) || comments.length,
       cursor: rawBody.cursor || rawBody.next_cursor || '',
       has_more: optionalBoolean(rawBody.has_more ?? rawBody.hasMore, false),
-      upstream: body,
-    }
-  }
-
-  async radioList(query = {}, context = {}) {
-    const data = await this.discover(query, context)
-    return {
-      radios: extractRadiosFromDiscover(data),
-      upstream: data,
-    }
-  }
-
-  async radioTracks(query = {}, context = {}) {
-    const radioId = requireString(query.radio_id || query.id, 'radio_id')
-    const payload = {
-      radio_id: radioId,
-      count: boundedPositiveInt(query.count, 10, 'count'),
-      cursor: query.cursor ? String(query.cursor) : '',
-    }
-    const response = await this.postLuna('/luna/feed/radio/tracks', payload, context)
-    const body = response.body || {}
-    return {
-      items: Array.isArray(body.items) ? body.items.map(normalizeFeedItem).filter(Boolean) : [],
-      has_more: Boolean(body.has_more),
       upstream: body,
     }
   }
