@@ -9,6 +9,7 @@
     "test": "node test/worker-test.js"
   },
   "devDependencies": {
+    "undici": "^8.10.0",
     "wrangler": "^4.125.0"
   }
 }

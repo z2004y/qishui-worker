@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>汽水音乐 · 公开目录浏览</title>
+<style>
+  :root {
+    --bg: #0f1115; --card: #1a1d24; --card2: #22262f; --line: #2c313c;
+    --tx: #e8eaed; --tx2: #9aa1ad; --acc: #34c759; --acc2: #8b5cf6; --danger: #ff5d5d;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--tx); font: 14px/1.5 -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; padding-bottom: 96px; }
+  header { position: sticky; top: 0; z-index: 20; background: rgba(15,17,21,.92); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); padding: 10px 14px; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  h1 { font-size: 16px; font-weight: 700; }
+  input[type=text] { background: var(--card); border: 1px solid var(--line); color: var(--tx); border-radius: 8px; padding: 6px 10px; font-size: 13px; outline: none; min-width: 160px; }
+  input:focus { border-color: var(--acc2); }
+  button { background: var(--card2); border: 1px solid var(--line); color: var(--tx); border-radius: 8px; padding: 6px 14px; cursor: pointer; font-size: 13px; }
+  button:hover { border-color: var(--acc2); }
+  button.primary { background: var(--acc); border-color: var(--acc); color: #0b0e14; font-weight: 600; }
+  .tabs { display: flex; gap: 6px; margin: 10px 14px 0; flex-wrap: wrap; }
+  .tab { padding: 6px 14px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); cursor: pointer; font-size: 13px; color: var(--tx2); }
+  .tab.on { background: var(--acc2); border-color: var(--acc2); color: #fff; }
+  main { padding: 12px 14px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+  .pl { background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; cursor: pointer; transition: transform .12s; }
+  .pl:hover { transform: translateY(-2px); border-color: var(--acc2); }
+  .pl img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; background: var(--card2); }
+  .pl .t { padding: 8px 10px; }
+  .pl .t b { display: block; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pl .t span { color: var(--tx2); font-size: 11px; }
+  .track { display: flex; gap: 10px; align-items: center; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; margin-bottom: 8px; cursor: pointer; }
+  .track:hover { border-color: var(--acc2); }
+  .track img { width: 42px; height: 42px; border-radius: 8px; object-fit: cover; background: var(--card2); }
+  .track .info { flex: 1; min-width: 0; }
+  .track .info b { display: block; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .track .info span { color: var(--tx2); font-size: 12px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .track .dur { color: var(--tx2); font-size: 12px; }
+  .msg { color: var(--tx2); padding: 20px 0; text-align: center; }
+  .err { color: var(--danger); }
+  footer { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; background: rgba(15,17,21,.97); border-top: 1px solid var(--line); padding: 8px 14px; }
+  #player { display: none; }
+  #player.show { display: block; }
+  .p-head { display: flex; gap: 10px; align-items: center; }
+  .p-head img { width: 44px; height: 44px; border-radius: 8px; object-fit: cover; background: var(--card2); }
+  .p-head .info { flex: 1; min-width: 0; }
+  .p-head .info b { font-size: 13px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .p-head .info span { color: var(--tx2); font-size: 12px; }
+  audio { width: 100%; margin-top: 6px; height: 34px; }
+  .p-actions { display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+  #lyrics { max-height: 160px; overflow: auto; background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin-top: 6px; font-size: 12.5px; color: var(--tx2); white-space: pre-wrap; }
+  .toolbar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .loadmore { width: 100%; margin-top: 10px; }
+  small { color: var(--tx2); }
+</style>
+</head>
+<body>
+<header>
+  <div class="row">
+    <h1>🎵 汽水音乐 · 公开目录</h1>
+  </div>
+  <div class="row" style="margin-top:8px">
+    <input type="text" id="apiBase" placeholder="API 地址" style="flex:1; min-width:220px" value="https://qishui-api.zzy721683736.workers.dev">
+    <input type="text" id="apiKey" placeholder="API Key（?key= 或在此填写）" style="min-width:200px">
+    <button onclick="savePrefs()">保存</button>
+  </div>
+  <div class="tabs" id="tabs">
+    <div class="tab on" data-tab="recommend">推荐歌单</div>
+    <div class="tab" data-tab="search">歌单搜索</div>
+    <div class="tab" data-tab="radio">电台</div>
+    <div class="tab" data-tab="parse">歌曲解析</div>
+  </div>
+</header>
+
+<main id="main"></main>
+
+<footer>
+  <div id="player">
+    <div class="p-head">
+      <img id="pCover" alt="">
+      <div class="info"><b id="pName"></b><span id="pArtist"></span></div>
+      <button onclick="copyUrl()">复制链接</button>
+    </div>
+    <audio id="audio" controls controlslist="nodownload"></audio>
+    <div class="p-actions">
+      <button onclick="toggleLyric()">歌词</button>
+      <button onclick="loadSongDetail(currentTrackId)">重新解析</button>
+    </div>
+    <div id="lyrics" style="display:none"></div>
+  </div>
+</footer>
+
+<script>
+'use strict'
+// ===== 配置 =====
+const DEFAULT_API = 'https://qishui-api.zzy721683736.workers.dev'
+let API_BASE = localStorage.getItem('qsApi') || DEFAULT_API
+let KEY = localStorage.getItem('qsKey') || new URLSearchParams(location.search).get('key') || ''
+let currentTab = 'recommend'
+let currentTrackId = ''
+let currentDetail = null
+
+// ===== 基础请求 =====
+async function api(path, params = {}) {
+  const url = new URL(API_BASE + path)
+  Object.entries(params).forEach(([k, v]) => v != null && v !== '' && url.searchParams.set(k, v))
+  if (KEY) url.searchParams.set('key', KEY)
+  const res = await fetch(url, { headers: { Accept: 'application/json' } })
+  let body = null
+  try { body = await res.json() } catch (_) {}
+  if (res.status === 401) throw new Error('鉴权失败：请检查 API Key（401）')
+  if (!body || body.code !== 0) throw new Error((body && body.message) || `HTTP ${res.status}`)
+  return body.data
+}
+// 上游 duration 有时是秒、有时是毫秒（>1h 视为毫秒）
+const normDur = (s) => { const n = Number(s) || 0; return n > 3600 ? Math.round(n / 1000) : n }
+const fmtDur = (s) => { const n = normDur(s); return n ? `${String(Math.floor(n / 60)).padStart(2, '0')}:${String(Math.floor(n % 60)).padStart(2, '0')}` : '--:--' }
+const artistNames = (arr) => (Array.isArray(arr) ? arr.map((a) => a.name || '').filter(Boolean).join(' / ') : '')
+
+// KRC 逐字 -> LRC
+function krcToLrc(text) {
+  return String(text || '')
+    .split('\n')
+    .map((line) => {
+      const m = line.match(/^\[\s*(\d+)\s*,\s*\d+\s*\](.*)$/)
+      if (!m) return ''
+      const content = m[2].replace(/<\s*\d+\s*,\s*\d+\s*,\s*\d+\s*>/g, '').trim()
+      if (!content) return ''
+      const t = Number(m[1])
+      const mm = String(Math.floor(t / 60000)).padStart(2, '0')
+      const ss = String(Math.floor((t % 60000) / 1000)).padStart(2, '0')
+      const xx = String(Math.floor(t % 1000)).padStart(3, '0')
+      return `[${mm}:${ss}.${xx}]${content}`
+    })
+    .filter(Boolean)
+    .join('\n')
+}
+
+// ===== UI =====
+const $ = (id) => document.getElementById(id)
+const main = $('main')
+const showMsg = (html, err) => { main.innerHTML = `<div class="msg ${err ? 'err' : ''}">${html}</div>` }
+const load = () => { main.innerHTML = '<div class="msg">加载中…</div>' }
+const escapeHtml = (s) => String(s || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
+
+// 加载更多状态
+let cursor = '', sessionId = '', loadingMore = false
+
+function playlistCard(p) {
+  return `<div class="pl" onclick="openPlaylist('${escapeHtml(p.id)}')">
+    <img src="${escapeHtml(p.cover_url || '')}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
+    <div class="t"><b>${escapeHtml(p.title || '未命名')}</b><span>${p.count_tracks ? p.count_tracks + ' 首' : ''}${p.type ? ' · 歌单' : ''}</span></div>
+  </div>`
+}
+function trackItem(t) {
+  const name = t.name || t.title || '未知'
+  const artist = artistNames(t.artists) || t.artist || ''
+  const cover = (t.album && (t.album.cover_url || t.album.url_cover)) || ''
+  const id = t.id || t.providerSongId || t.trackId || ''
+  return `<div class="track" onclick="parseAndPlay('${escapeHtml(id)}')">
+    <img src="${escapeHtml(cover)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
+    <div class="info"><b>${escapeHtml(name)}</b><span>${escapeHtml(artist)}</span></div>
+    <div class="dur">${fmtDur(t.duration || t.duration_ms)}</div>
+  </div>`
+}
+
+// ===== Tab: 推荐歌单 =====
+async function loadRecommend() {
+  load()
+  try {
+    const d = await api('/recommend/playlist', { count: 30 })
+    const list = d.playlists || []
+    if (!list.length) return showMsg('推荐歌单为空')
+    main.innerHTML = `<div class="grid">${list.map(playlistCard).join('')}</div>`
+  } catch (e) { showMsg(e.message, true) }
+}
+
+// ===== Tab: 歌单搜索 =====
+function renderSearch() {
+  main.innerHTML = `<div class="toolbar">
+    <input type="text" id="kw" placeholder="搜索歌单关键词…" style="flex:1; min-width:200px" onkeydown="if(event.key==='Enter')searchPlaylists()">
+    <button class="primary" onclick="searchPlaylists()">搜索</button>
+  </div><div id="searchResult"></div>`
+  $('kw').focus()
+}
+async function searchPlaylists() {
+  const kw = $('kw').value.trim()
+  if (!kw) return
+  const box = $('searchResult')
+  box.innerHTML = '<div class="msg">搜索中…</div>'
+  try {
+    const d = await api('/search/playlist', { keywords: kw })
+    const list = d.playlists || []
+    box.innerHTML = list.length ? `<div class="grid">${list.map(playlistCard).join('')}</div>` : '<div class="msg">无结果</div>'
+  } catch (e) { box.innerHTML = `<div class="msg err">${escapeHtml(e.message)}</div>` }
+}
+
+// ===== Tab: 电台 =====
+async function loadRadio() {
+  main.innerHTML = '<div class="msg">加载中…</div>'
+  try {
+    const d = await api('/radio/list')
+    const radios = d.radios || []
+    if (!radios.length) return main.innerHTML = '<div class="msg">当前无电台数据（上游发现页可能未返回电台块）</div>'
+    main.innerHTML = `<div class="grid">${radios.map((r) => `<div class="pl" onclick="openRadio('${escapeHtml(r.id)}')"><div class="t"><b>${escapeHtml(r.name)}</b></div></div>`).join('')}</div>`
+  } catch (e) { showMsg(e.message, true) }
+}
+async function openRadio(id) {
+  load()
+  try {
+    const d = await api('/radio/tracks', { radio_id: id, count: 30 })
+    const items = d.items || []
+    main.innerHTML = items.length
+      ? items.map((it) => trackItem(it.track || { id: it.id, name: '', duration: 0 })).join('')
+      : '<div class="msg">该电台暂无歌曲</div>'
+  } catch (e) { showMsg(e.message, true) }
+}
+
+// ===== Tab: 歌曲解析 =====
+function renderParse() {
+  main.innerHTML = `<div class="toolbar">
+    <input type="text" id="pid" placeholder="track_id 或分享链接…" style="flex:1; min-width:200px" onkeydown="if(event.key==='Enter')parseById()">
+    <button class="primary" onclick="parseById()">解析</button>
+  </div><div id="parseResult"></div>`
+  $('pid').focus()
+}
+async function parseById() {
+  const id = $('pid').value.trim()
+  if (!id) return
+  const box = $('parseResult')
+  box.innerHTML = '<div class="msg">解析中…</div>'
+  try {
+    const d = await api('/song/detail', { track_id: id })
+    showParsed(d, box)
+  } catch (e) { box.innerHTML = `<div class="msg err">${escapeHtml(e.message)}</div>` }
+}
+
+// ===== 歌单详情（含分页） =====
+let currentPlaylistId = ''
+async function openPlaylist(id) {
+  currentPlaylistId = id
+  currentTab = 'detail'
+  document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('on', t.dataset.tab === currentTab))
+  load()
+  cursor = ''; sessionId = ''; loadingMore = false
+  try {
+    const d = await api('/playlist/detail', { playlist_id: id, count: 30 })
+    renderPlaylist(d, d.playlist && d.playlist.title)
+  } catch (e) { showMsg(e.message, true) }
+}
+function renderPlaylist(d, title) {
+  cursor = d.next_cursor || ''; sessionId = d.session_id || ''
+  const tracks = (d.media_resources || []).map((r) => r.track || r).filter(Boolean)
+  const items = tracks.map(trackItem).join('') || '<div class="msg">歌单暂无歌曲</div>'
+  main.innerHTML = `<h2 style="margin-bottom:10px">${escapeHtml(title || '歌单')}</h2>${items}
+    ${cursor ? '<button class="loadmore" onclick="loadMorePlaylist()">加载更多</button>' : ''}`
+}
+async function loadMorePlaylist() {
+  if (!cursor || loadingMore) return
+  loadingMore = true
+  try {
+    const d = await api('/playlist/detail', { playlist_id: currentPlaylistId, count: 30, cursor, session_id: sessionId })
+    cursor = d.next_cursor || ''
+    const tracks = (d.media_resources || []).map((r) => r.track || r).filter(Boolean)
+    const more = tracks.map(trackItem).join('')
+    const btn = document.querySelector('.loadmore')
+    if (more) btn.insertAdjacentHTML('beforebegin', more)
+    if (!cursor) btn.remove()
+  } catch (e) { alert(e.message) } finally { loadingMore = false }
+}
+// 统一打开歌单：grid 卡片带 data-pl
+
+// ===== 播放 =====
+function pickCover(al) {
+  if (!al) return ''
+  let c = al.cover_url || al.url_cover || ''
+  if (c && typeof c === 'object') c = (Array.isArray(c.urls) && c.urls[0]) ? (c.urls[0] || '') + (c.uri || '') : (c.url || c.uri || c.template || '')
+  return c
+}
+async function parseAndPlay(trackId) {
+  if (!trackId) return alert('缺少 track_id')
+  currentTrackId = trackId
+  $('player').classList.add('show')
+  $('pName').textContent = '解析中…'
+  $('pArtist').textContent = ''
+  $('pCover').src = ''
+  $('lyrics').style.display = 'none'
+  try {
+    const d = await api('/song/detail', { track_id: trackId })
+    currentDetail = d
+    if (!d.audio_url) throw new Error('未获取到可播放地址（可能无版权）')
+    $('pName').textContent = d.name || '未知'
+    $('pArtist').textContent = artistNames(d.artists) || ''
+    const cover = pickCover(d.album)
+      || pickCover(d.raw && d.raw.seo_track && d.raw.seo_track.track && d.raw.seo_track.track.album)
+    if (cover) $('pCover').src = cover
+    const audio = $('audio')
+    audio.src = d.audio_url
+    requestAnimationFrame(() => {
+      try { audio.play().catch(() => {}) } catch (_) {}
+    })
+  } catch (e) {
+    $('pName').textContent = '解析失败'
+    $('pArtist').textContent = e.message
+  }
+}
+function copyUrl() {
+  if (currentDetail && currentDetail.audio_url) {
+    navigator.clipboard.writeText(currentDetail.audio_url).then(() => alert('链接已复制')).catch(() => prompt('复制链接：', currentDetail.audio_url))
+  }
+}
+function toggleLyric() {
+  const box = $('lyrics')
+  if (box.style.display !== 'none') return box.style.display = 'none'
+  box.style.display = 'block'
+  box.textContent = '歌词加载中…'
+  loadSongLyric(currentTrackId, box)
+}
+async function loadSongLyric(trackId, box) {
+  try {
+    const d = await api('/lyric', { track_id: trackId })
+    const lrc = krcToLrc(d.lrc) || '（无歌词）'
+    box.textContent = lrc
+  } catch (e) { box.textContent = '歌词获取失败：' + e.message }
+}
+async function loadSongDetail(trackId) { parseAndPlay(trackId) }
+</script>
+<script>
+// ===== 初始化 & 事件 =====
+document.addEventListener('DOMContentLoaded', () => {
+  $('apiBase').value = API_BASE
+  $('apiKey').value = KEY
+  document.querySelectorAll('.tab').forEach((t) => {
+    t.addEventListener('click', () => {
+      currentTab = t.dataset.tab
+      document.querySelectorAll('.tab').forEach((x) => x.classList.toggle('on', x === t))
+      if (currentTab === 'recommend') loadRecommend()
+      else if (currentTab === 'search') renderSearch()
+      else if (currentTab === 'radio') loadRadio()
+      else if (currentTab === 'parse') renderParse()
+    })
+  })
+  loadRecommend()
+})
+function savePrefs() {
+  API_BASE = $('apiBase').value.trim() || DEFAULT_API
+  KEY = $('apiKey').value.trim()
+  localStorage.setItem('qsApi', API_BASE)
+  localStorage.setItem('qsKey', KEY)
+  alert('已保存：API = ' + API_BASE + (KEY ? '，Key = ' + KEY : '（未设 Key）'))
+}
+</script>
+</body>
+</html>
