@@ -69,7 +69,7 @@
     <div class="tab on" data-tab="recommend">推荐歌单</div>
     <div class="tab" data-tab="songSearch">歌曲搜索</div>
     <div class="tab" data-tab="search">歌单搜索</div>
-    <div class="tab" data-tab="radio">电台</div>
+    <div class="tab" data-tab="discover">发现歌曲</div>
     <div class="tab" data-tab="parse">歌曲解析</div>
   </div>
 </header>
@@ -218,24 +218,21 @@ async function searchPlaylists() {
   } catch (e) { box.innerHTML = `<div class="msg err">${escapeHtml(e.message)}</div>` }
 }
 
-// ===== Tab: 电台 =====
-async function loadRadio() {
-  main.innerHTML = '<div class="msg">加载中…</div>'
+// ===== Tab: 发现歌曲（聚合推荐歌单里的歌曲，直接可听；电台需登录态故不提供） =====
+async function loadDiscover() {
+  main.innerHTML = '<div class="msg">聚合推荐歌单中…</div>'
   try {
-    const d = await api('/radio/list')
-    const radios = d.radios || []
-    if (!radios.length) return main.innerHTML = '<div class="msg">当前无电台数据（上游发现页可能未返回电台块）</div>'
-    main.innerHTML = `<div class="grid">${radios.map((r) => `<div class="pl" onclick="openRadio('${escapeHtml(r.id)}')"><div class="t"><b>${escapeHtml(r.name)}</b></div></div>`).join('')}</div>`
-  } catch (e) { showMsg(e.message, true) }
-}
-async function openRadio(id) {
-  load()
-  try {
-    const d = await api('/radio/tracks', { radio_id: id, count: 30 })
-    const items = d.items || []
-    main.innerHTML = items.length
-      ? items.map((it) => trackItem(it.track || { id: it.id, name: '', duration: 0 })).join('')
-      : '<div class="msg">该电台暂无歌曲</div>'
+    const rec = await api('/recommend/playlist', { count: 10 })
+    const pls = (rec.playlists || []).slice(0, 8)
+    const sets = await Promise.all(pls.map((p) =>
+      api('/playlist/detail', { playlist_id: p.id, count: 30 })
+        .then((d) => (d.media_resources || []).map((x) => x.track || x).filter(Boolean))
+        .catch(() => []),
+    ))
+    const tracks = [...new Map(sets.flat().map((t) => [t.id || t.trackId, t])).values()]
+    if (!tracks.length) { main.innerHTML = '<div class="msg">暂无可发现歌曲</div>'; return }
+    main.innerHTML = `<div class="toolbar"><button class="primary" onclick="loadDiscover()">换一批</button><small style="margin-left:auto">${pls.length} 个歌单 · ${tracks.length} 首</small></div>`
+      + tracks.map(trackItem).join('')
   } catch (e) { showMsg(e.message, true) }
 }
 
@@ -360,7 +357,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (currentTab === 'recommend') loadRecommend()
       else if (currentTab === 'songSearch') renderSongSearch()
       else if (currentTab === 'search') renderSearch()
-      else if (currentTab === 'radio') loadRadio()
+      else if (currentTab === 'discover') loadDiscover()
       else if (currentTab === 'parse') renderParse()
     })
   })

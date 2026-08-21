@@ -81,8 +81,8 @@ curl -H "Authorization: Bearer YOUR_API_KEY" https://qishui-api.zzy721683736.wor
 | `GET/POST /discover/mix` | 发现页混合推荐流 |
 | `GET/POST /feed/mode` | Feed 模式数据（对普通调用价值有限） |
 | `GET/POST /feed/mode/guidance` | Feed 模式引导（同上） |
-| `GET/POST /radio/tracks` | 电台歌曲 Feed |
-| `GET/POST /radio/list` | 电台列表（当前发现页可能无电台块，可能返回空） |
+|  `GET/POST /radio/tracks` | 电台歌曲 Feed |
+|  `GET/POST /radio/list` | 电台列表（上游需登录态，当前返回空） |
 | `GET/POST /comment` | 歌曲评论（可能为空） |
 
 ### 搜索（⚠️ 当前上游受限，可能返回空）
